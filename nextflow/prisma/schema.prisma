@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Workflow {
+  id        String        @id @default(cuid())
+  clerkId   String
+  name      String
+  status    String        @default("draft")
+  canvas    Json
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  runs      WorkflowRun[]
+
+  @@index([clerkId])
+}
+
+model WorkflowRun {
+  id         String                  @id @default(cuid())
+  workflowId String
+  workflow   Workflow                @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  status     String
+  scope      String
+  durationMs Int
+  startedAt  DateTime                @default(now())
+  nodeRuns   WorkflowRunNodeResult[]
+
+  @@index([workflowId])
+}
+
+model WorkflowRunNodeResult {
+  id         String      @id @default(cuid())
+  runId      String
+  run        WorkflowRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  nodeId     String
+  label      String
+  status     String
+  inputs     Json
+  output     Json?
+  error      String?
+  durationMs Int
+
+  @@index([runId])
+}
