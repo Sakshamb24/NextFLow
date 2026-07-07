@@ -9,6 +9,7 @@ import {
   type NodeChange,
 } from "@xyflow/react";
 import { create } from "zustand";
+import { createRequiredSampleWorkflow } from "@/lib/sample-workflow";
 import { workflowApi } from "@/lib/workflow-api";
 import type {
   NodeKind,
@@ -35,6 +36,7 @@ type WorkflowStore = {
   loadWorkflows: () => Promise<void>;
   loadWorkflow: (id: string) => Promise<void>;
   createWorkflow: () => Promise<string>;
+  createSampleWorkflow: () => Promise<string>;
   openWorkflow: (id: string) => void;
   renameWorkflow: (id: string, name: string) => Promise<void>;
   deleteWorkflow: (id: string) => Promise<void>;
@@ -48,6 +50,7 @@ type WorkflowStore = {
   onNodesChange: (changes: NodeChange<WorkflowNode>[]) => void;
   onEdgesChange: (changes: EdgeChange<WorkflowEdge>[]) => void;
   connect: (connection: Connection) => void;
+  isValidConnection: (connection: Connection | WorkflowEdge) => boolean;
   deleteSelected: () => void;
   setSelectedNodeIds: (ids: string[]) => void;
   undo: () => void;
@@ -92,6 +95,18 @@ const wouldCreateCycle = (edges: WorkflowEdge[], source: string, target: string)
   };
 
   return visit(target);
+};
+
+const isConnectionAllowed = (workflow: WorkflowDocument, connection: Connection | WorkflowEdge) => {
+  if (!connection.source || !connection.target) return false;
+  if (connection.source === connection.target) return false;
+
+  const sourceType = connectionTypes(connection.sourceHandle);
+  const targetType = connectionTypes(connection.targetHandle);
+  if (sourceType !== targetType) return false;
+  if (wouldCreateCycle(workflow.edges, connection.source, connection.target)) return false;
+
+  return true;
 };
 
 const makeNode = (kind: Exclude<NodeKind, "requestInputs" | "response">, index: number): WorkflowNode => {
@@ -178,6 +193,23 @@ export const useWorkflowStore = create<WorkflowStore>()((set, get) => ({
   createWorkflow: async () => {
     set({ saving: true, error: null });
     const { workflow } = await workflowApi.create();
+    set((state) => ({
+      workflows: [workflow, ...state.workflows],
+      activeWorkflowId: workflow.id,
+      saving: false,
+    }));
+    return workflow.id;
+  },
+
+  createSampleWorkflow: async () => {
+    set({ saving: true, error: null });
+    const sample = createRequiredSampleWorkflow();
+    const { workflow } = await workflowApi.create({
+      ...sample,
+      id: crypto.randomUUID(),
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    });
     set((state) => ({
       workflows: [workflow, ...state.workflows],
       activeWorkflowId: workflow.id,
@@ -416,8 +448,7 @@ export const useWorkflowStore = create<WorkflowStore>()((set, get) => ({
 
         const sourceType = connectionTypes(connection.sourceHandle);
         const targetType = connectionTypes(connection.targetHandle);
-        if (sourceType !== targetType) return workflow;
-        if (wouldCreateCycle(workflow.edges, connection.source, connection.target)) return workflow;
+        if (!isConnectionAllowed(workflow, connection)) return workflow;
 
         const edge: WorkflowEdge = {
           ...connection,
@@ -436,6 +467,12 @@ export const useWorkflowStore = create<WorkflowStore>()((set, get) => ({
         };
       }),
     })),
+
+  isValidConnection: (connection) => {
+    const workflow = get().getActiveWorkflow();
+    if (!workflow) return false;
+    return isConnectionAllowed(workflow, connection);
+  },
 
   deleteSelected: () =>
     set((state) => ({

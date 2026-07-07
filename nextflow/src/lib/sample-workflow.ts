@@ -28,8 +28,7 @@ export const createBlankWorkflow = (id = crypto.randomUUID()): WorkflowDocument 
               id: "text_field",
               name: "text_field",
               type: "text_field",
-              value:
-                "Product: Wireless Bluetooth Headphones. Features: Noise cancellation, 30-hour battery, foldable design.",
+              value: "",
             },
             {
               id: "image_field",
@@ -61,12 +60,34 @@ export const createBlankWorkflow = (id = crypto.randomUUID()): WorkflowDocument 
 
 export const createRequiredSampleWorkflow = (): WorkflowDocument => {
   const workflow = createBlankWorkflow("sample-ilm-workflow");
+  const baseRequestNode = workflow.nodes[0];
+  if (baseRequestNode.data.kind !== "requestInputs") {
+    throw new Error("Sample workflow requires a Request-Inputs starter node.");
+  }
+
+  const requestInputs = {
+    ...baseRequestNode,
+    position: { x: -520, y: 160 },
+    data: {
+      ...baseRequestNode.data,
+      fields: baseRequestNode.data.fields.map((field) =>
+        field.id === "text_field"
+          ? {
+              ...field,
+              value:
+                "Product: Wireless Bluetooth Headphones. Features: Noise cancellation, 30-hour battery, foldable design.",
+            }
+          : field,
+      ),
+    },
+  } satisfies WorkflowNode;
+
   const nodes: WorkflowNode[] = [
-    workflow.nodes[0],
+    requestInputs,
     {
       id: "crop-1",
       type: "cropImage",
-      position: { x: -130, y: 40 },
+      position: { x: -170, y: 50 },
       data: {
         kind: "cropImage",
         label: "Crop Image #1",
@@ -76,7 +97,7 @@ export const createRequiredSampleWorkflow = (): WorkflowDocument => {
     {
       id: "crop-2",
       type: "cropImage",
-      position: { x: -130, y: 365 },
+      position: { x: -170, y: 365 },
       data: {
         kind: "cropImage",
         label: "Crop Image #2",
@@ -86,7 +107,7 @@ export const createRequiredSampleWorkflow = (): WorkflowDocument => {
     {
       id: "gemini-1",
       type: "gemini",
-      position: { x: 270, y: -10 },
+      position: { x: 230, y: -20 },
       data: {
         kind: "gemini",
         label: "Gemini 3.1 Pro #1",
@@ -101,7 +122,7 @@ export const createRequiredSampleWorkflow = (): WorkflowDocument => {
     {
       id: "gemini-2",
       type: "gemini",
-      position: { x: 270, y: 305 },
+      position: { x: 230, y: 320 },
       data: {
         kind: "gemini",
         label: "Gemini 3.1 Pro #2",
@@ -116,7 +137,7 @@ export const createRequiredSampleWorkflow = (): WorkflowDocument => {
     {
       id: "gemini-final",
       type: "gemini",
-      position: { x: 650, y: 185 },
+      position: { x: 630, y: 170 },
       data: {
         kind: "gemini",
         label: "Gemini 3.1 Pro #3 (Final)",
@@ -128,7 +149,7 @@ export const createRequiredSampleWorkflow = (): WorkflowDocument => {
         settingsCollapsed: true,
       },
     },
-    workflow.nodes[1],
+    { ...workflow.nodes[1], position: { x: 1020, y: 290 } },
   ];
 
   const edge = (

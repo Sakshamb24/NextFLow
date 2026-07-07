@@ -15,6 +15,7 @@ export function DashboardClient() {
   const error = useWorkflowStore((state) => state.error);
   const loadWorkflows = useWorkflowStore((state) => state.loadWorkflows);
   const createWorkflow = useWorkflowStore((state) => state.createWorkflow);
+  const createSampleWorkflow = useWorkflowStore((state) => state.createSampleWorkflow);
   const renameWorkflow = useWorkflowStore((state) => state.renameWorkflow);
   const deleteWorkflow = useWorkflowStore((state) => state.deleteWorkflow);
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -31,16 +32,28 @@ export function DashboardClient() {
             <p className="text-sm font-medium text-[#747782]">NextFlow</p>
             <h1 className="mt-1 text-2xl font-semibold tracking-tight">Workflows</h1>
           </div>
-          <button
-            className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#17171a] px-4 text-sm font-medium text-white shadow-sm transition hover:bg-black"
-            onClick={async () => {
-              const id = await createWorkflow();
-              router.push(`/workflow/${id}`);
-            }}
-          >
-            <Plus size={16} />
-            Create New Workflow
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              className="inline-flex h-10 items-center gap-2 rounded-lg border border-[#dedee6] bg-white px-4 text-sm font-medium text-[#424550] shadow-sm transition hover:bg-[#f7f7fa]"
+              onClick={async () => {
+                const id = await createSampleWorkflow();
+                router.push(`/workflow/${id}`);
+              }}
+            >
+              <Play size={16} />
+              Open Sample Workflow
+            </button>
+            <button
+              className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#17171a] px-4 text-sm font-medium text-white shadow-sm transition hover:bg-black"
+              onClick={async () => {
+                const id = await createWorkflow();
+                router.push(`/workflow/${id}`);
+              }}
+            >
+              <Plus size={16} />
+              Create New Workflow
+            </button>
+          </div>
         </header>
 
         <div className="overflow-hidden rounded-xl border border-[#e8e8ed] bg-white shadow-[0_1px_2px_rgba(20,20,25,0.04)]">
@@ -60,6 +73,28 @@ export function DashboardClient() {
               <div>
                 <h2 className="text-base font-semibold">No workflows yet</h2>
                 <p className="mt-1 text-sm text-[#747782]">Create your first ILM workflow canvas.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#dedee6] bg-white px-3 text-sm font-medium text-[#424550] hover:bg-[#f7f7fa]"
+                  onClick={async () => {
+                    const id = await createSampleWorkflow();
+                    router.push(`/workflow/${id}`);
+                  }}
+                >
+                  <Play size={15} />
+                  Open Sample Workflow
+                </button>
+                <button
+                  className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#17171a] px-3 text-sm font-medium text-white hover:bg-black"
+                  onClick={async () => {
+                    const id = await createWorkflow();
+                    router.push(`/workflow/${id}`);
+                  }}
+                >
+                  <Plus size={15} />
+                  Create New
+                </button>
               </div>
             </div>
           ) : (

@@ -39,8 +39,9 @@ const getRequestOutput = (data: RequestInputsData): NodeOutput => ({
 
 const outputFromHandle = (output: NodeOutput | undefined, handle?: string | null) => {
   if (!output) return "";
-  if (handle?.includes("image")) return output.image ?? "";
-  if (handle?.includes("response")) return output.text ?? "";
+  const normalizedHandle = handle?.toLowerCase() ?? "";
+  if (normalizedHandle.includes("image")) return output.image ?? "";
+  if (normalizedHandle.includes("response")) return output.text ?? "";
   if (handle?.startsWith("out-")) {
     const fieldId = handle.replace("out-", "");
     return output.fields?.[fieldId] ?? output.text ?? output.image ?? "";
@@ -58,6 +59,17 @@ const buildInputs = (
     edge,
     value: outputFromHandle(outputs.get(edge.source), edge.sourceHandle),
   }));
+};
+
+const connectedNumber = (
+  inputs: ReturnType<typeof buildInputs>,
+  targetHandle: string,
+  fallback: number,
+) => {
+  const value = inputs.find((input) => input.edge.targetHandle === targetHandle)?.value;
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(0, Math.min(100, number));
 };
 
 const runNode = async (
@@ -93,10 +105,10 @@ const runNode = async (
         "";
       const result = await cropImageTask({
         imageUrl,
-        x: data.params.x,
-        y: data.params.y,
-        width: data.params.width,
-        height: data.params.height,
+        x: connectedNumber(inputs, "in-x", data.params.x),
+        y: connectedNumber(inputs, "in-y", data.params.y),
+        width: connectedNumber(inputs, "in-width", data.params.width),
+        height: connectedNumber(inputs, "in-height", data.params.height),
       });
       const output = { image: result.outputImageUrl };
       return {

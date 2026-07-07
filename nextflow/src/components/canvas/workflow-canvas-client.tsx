@@ -36,12 +36,15 @@ function CanvasInner() {
   const onNodesChange = useWorkflowStore((state) => state.onNodesChange);
   const onEdgesChange = useWorkflowStore((state) => state.onEdgesChange);
   const connect = useWorkflowStore((state) => state.connect);
+  const isValidConnection = useWorkflowStore((state) => state.isValidConnection);
   const deleteSelected = useWorkflowStore((state) => state.deleteSelected);
   const setSelectedNodeIds = useWorkflowStore((state) => state.setSelectedNodeIds);
   const undo = useWorkflowStore((state) => state.undo);
   const redo = useWorkflowStore((state) => state.redo);
   const runWorkflow = useWorkflowStore((state) => state.runWorkflow);
   const importWorkflow = useWorkflowStore((state) => state.importWorkflow);
+  const autosaveRef = useRef<{ id: string; fingerprint: string } | null>(null);
+  const workflowId = workflow?.id;
 
   useEffect(() => {
     if (params.workflowId) {
@@ -51,11 +54,19 @@ function CanvasInner() {
   }, [loadWorkflow, openWorkflow, params.workflowId]);
 
   useEffect(() => {
-    if (workflow) window.setTimeout(() => fitView({ padding: 0.28, duration: 500 }), 80);
-  }, [fitView, workflow?.id]);
+    if (workflowId) window.setTimeout(() => fitView({ padding: 0.28, duration: 500 }), 80);
+  }, [fitView, workflowId]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const isEditing =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        Boolean(target?.isContentEditable);
+      if (isEditing) return;
+
       if (event.key === "Delete" || event.key === "Backspace") deleteSelected();
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") undo();
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "y") redo();
@@ -64,10 +75,38 @@ function CanvasInner() {
     return () => window.removeEventListener("keydown", onKey);
   }, [deleteSelected, redo, undo]);
 
-  const selectedIds = useMemo(
-    () => workflow?.nodes.filter((node) => node.selected).map((node) => node.id) ?? [],
-    [workflow?.nodes],
+  const autosaveFingerprint = useMemo(
+    () =>
+      workflow
+        ? JSON.stringify({
+            name: workflow.name,
+            status: workflow.status,
+            nodes: workflow.nodes,
+            edges: workflow.edges,
+          })
+        : "",
+    [workflow],
   );
+
+  useEffect(() => {
+    if (!workflow || loading || executing) return;
+
+    if (autosaveRef.current?.id !== workflow.id) {
+      autosaveRef.current = { id: workflow.id, fingerprint: autosaveFingerprint };
+      return;
+    }
+
+    if (autosaveRef.current.fingerprint === autosaveFingerprint) return;
+
+    const timeout = window.setTimeout(() => {
+      void saveActiveWorkflow().then(() => {
+        autosaveRef.current = { id: workflow.id, fingerprint: autosaveFingerprint };
+      });
+    }, 900);
+
+    return () => window.clearTimeout(timeout);
+  }, [autosaveFingerprint, executing, loading, saveActiveWorkflow, workflow]);
+
   const selectedExecutableIds = useMemo(
     () =>
       workflow?.nodes
@@ -128,7 +167,7 @@ function CanvasInner() {
             <button className="toolbar-button" onClick={() => fileInputRef.current?.click()} title="Import JSON">
               <Upload size={15} />
             </button>
-            <button className="toolbar-button" title="Saved">
+            <button className="toolbar-button" title={saving ? "Autosaving" : "Autosaved"}>
               <Save size={15} />
             </button>
             <button
@@ -178,6 +217,7 @@ function CanvasInner() {
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={connect}
+            isValidConnection={isValidConnection}
             onSelectionChange={({ nodes }) => setSelectedNodeIds(nodes.map((node) => node.id))}
             fitView
             proOptions={{ hideAttribution: true }}

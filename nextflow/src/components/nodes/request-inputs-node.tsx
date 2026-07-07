@@ -50,8 +50,8 @@ export function RequestInputsNode({ id, data }: FlowNodeProps<RequestInputsData>
               <>
                 <label className="flex h-20 cursor-pointer items-center justify-center overflow-hidden rounded-md border border-dashed border-[#d8d8e0] bg-white text-[#8b8e98]">
                   {field.previewUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
                     <div className="relative h-full w-full">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={field.previewUrl} alt={field.name} className="h-full w-full object-cover" />
                       {uploadingFieldId === field.id ? (
                         <div className="absolute inset-x-0 bottom-0 bg-black/55 px-2 py-1 text-[10px] font-medium text-white">
